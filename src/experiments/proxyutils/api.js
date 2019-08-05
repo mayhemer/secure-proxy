@@ -166,6 +166,14 @@ function getURLFromPref(pref) {
   }
 }
 
+ExtensionPreferencesManager.addSetting("secureProxy.prefs", {
+  prefNames: ["captivedetect.canonicalURL"],
+
+  setCallback(value) {
+    throw new ExtensionError("secureProxy.settings are readonly");
+  },
+});
+
 ExtensionPreferencesManager.addSetting("network.ftp.enabled", {
   prefNames: ["network.ftp.enabled"],
 
@@ -304,22 +312,28 @@ this.proxyutils = class extends ExtensionAPI {
             }
           ),
 
-          settings: {
-            async get(details) {
-              return {
-                debuggingEnabled: false,
-                captiveDetect: getStringPrefValue("captivedetect.canonicalURL"),
-                fxaURL: null,
-                proxyURL: null,
-              };
-            },
-            set(details) {
-              throw new ExtensionError("secureProxy.settings are readonly");
-            },
-            clear(details) {
-              throw new ExtensionError("secureProxy.settings are readonly");
-            },
-          },
+          settings: Object.assign(
+            ExtensionPreferencesManager.getSettingsAPI(
+              context.extension.id,
+              "secureProxy.prefs",
+              () => {
+                return {
+                  debuggingEnabled: false,
+                  captiveDetect: getStringPrefValue("captivedetect.canonicalURL"),
+                  fxaURL: null,
+                  proxyURL: null,
+                };
+              },
+              undefined,
+              false,
+              () => {}
+            ),
+            {
+              set: details => {
+                throw new ExtensionError("secureProxy.settings are readonly");
+              },
+            }
+          ),
 
           onChanged: new EventManager({
             context,
